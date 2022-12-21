@@ -8,6 +8,4 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.9.0", features = ["dynamic"] }
 bevy_prototype_debug_lines = "0.9"
-nalgebra = "0.31.4"
-lazy_static = "1.4.0"
-rand = "0.8.5"
+splines = "4.1.1"
