@@ -1,10 +1,6 @@
 use super::*;
 
-const HANDLE_LINE_WIDTH: f32 = 1.5;
-const HANDLE_OUTER_CIRCLE_RADIUS: f32 = 10.0;
-const HANDLE_INNER_CIRCLE_RADIUS: f32 = 7.0;
 const HANDLE_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
-
 const GHOST_HANDLE_COLOR: Color = Color::rgb(0.7, 0.7, 0.7);
 
 pub struct HandlePlugin;
@@ -27,6 +23,12 @@ impl Plugin for HandlePlugin {
 }
 
 #[derive(Component)]
+pub enum HandlePart {
+    Circle(Transform),
+    Line(Path)
+}
+
+#[derive(Component)]
 pub struct CurveHandle;
 
 #[derive(Component)]
@@ -37,68 +39,30 @@ fn setup_handles(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
-    // line
-    commands.spawn((GeometryBuilder::build_as(
-        &get_line_path(Vec2::ZERO, Vec2::ZERO), 
-        DrawMode::Stroke(StrokeMode::new(HANDLE_COLOR, HANDLE_LINE_WIDTH)), 
-        Transform::default()
+    commands.spawn((HandleBundle::new(
+        Vec2::ZERO,
+        Vec2::ZERO,
+        HANDLE_COLOR,
+        2.0,
+        &mut meshes,
+        &mut materials
     ), CurveHandle));
 
-    // outer circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(HANDLE_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 2.0)
-            .with_scale(Vec3::new(HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS)),
-        ..default()
-    }, CurveHandle));
-
-    // inner circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(BACKGROUND_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 2.1)
-            .with_scale(Vec3::new(HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS)),
-        ..default()
-    }, CurveHandle));
-
     // Ghost handles
-
-    // line
-    commands.spawn((GeometryBuilder::build_as(
-        &get_line_path(Vec2::ZERO, Vec2::ZERO), 
-        DrawMode::Stroke(StrokeMode::new(GHOST_HANDLE_COLOR, HANDLE_LINE_WIDTH)), 
-        Transform::default()
+    commands.spawn((HandleBundle::new(
+        Vec2::ZERO,
+        Vec2::ZERO,
+        GHOST_HANDLE_COLOR,
+        1.9,
+        &mut meshes,
+        &mut materials
     ), GhostHandle));
-
-    // outer circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(GHOST_HANDLE_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 1.0)
-            .with_scale(Vec3::new(HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS)),
-        ..default()
-    }, GhostHandle));
-
-    // inner circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(BACKGROUND_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 1.1)
-            .with_scale(Vec3::new(HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS)),
-        ..default()
-    }, GhostHandle));
 }   
 
+#[allow(clippy::complexity)]
 fn place_handle_at_cursor(
-    mut handle_path_query: Query<&mut Path, (With<CurveHandle>, Without<GhostHandle>)>,
-    mut handle_transform_query: Query<&mut Transform, (With<CurveHandle>, Without<GhostHandle>, Without<Path>)>,
-    mut ghost_handle_path_query: Query<&mut Path, With<GhostHandle>>,
-    mut ghost_handle_transform_query: Query<&mut Transform, (With<GhostHandle>, Without<Path>)>,
+    mut handle_query: Query<(&mut Path, &mut Transform), (With<CurveHandle>, Without<GhostHandle>)>,
+    mut ghost_handle_path_query: Query<(&mut Path, &mut Transform), With<GhostHandle>>,
     next_point_query: Res<NextPointPos>,
     mut control_points_query: ResMut<ControlPoints>,
     cursor_pos: Res<CursorPos>,
@@ -114,15 +78,10 @@ fn place_handle_at_cursor(
         0.0
     );
 
-    *handle_path_query.single_mut() = get_line_path(
-        next_point, 
-        Vec2::new(cursor_x, cursor_y)
-    );
-
-    for mut handle_transform in handle_transform_query.iter_mut() {
-        handle_transform.translation.x = cursor_x;
-        handle_transform.translation.y = cursor_y;
-    }
+    // handle_query.single_mut().new_points(
+    //     next_point, 
+    //     Vec2::new(cursor_x, cursor_y)
+    // );
 
     control_points_query.1 = Vector3::new(
         (2.0 * next_point.x - cursor_x) as f64,
@@ -130,15 +89,10 @@ fn place_handle_at_cursor(
         0.0
     );
 
-    *ghost_handle_path_query.single_mut() = get_line_path(
-        next_point, 
-        Vec2::new(2.0 * next_point.x - cursor_x, 2.0 * next_point.y - cursor_y)
-    );
-
-    for mut ghost_handle_transform in ghost_handle_transform_query.iter_mut() {
-        ghost_handle_transform.translation.x = 2.0 * next_point.x - cursor_x;
-        ghost_handle_transform.translation.y = 2.0 * next_point.y - cursor_y;
-    }
+    // handle_query.single_mut().new_points(
+    //     next_point, 
+    //     Vec2::new(2.0 * next_point.x - cursor_x, 2.0 * next_point.y - cursor_y)
+    // );
 }
 
 fn set_curve(

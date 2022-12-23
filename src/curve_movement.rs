@@ -48,6 +48,7 @@ fn setup_curve(
     ), CurvePath));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn increment_t(
     time: Res<Time>,
     mut t: ResMut<T>,
@@ -89,7 +90,7 @@ fn reset_current_curve(
     cursor_pos: Res<CursorPos>,
     mut next_point_transform_query: Query<&mut Transform, With<NextPoint>>
 ) {
-    let last_point = next_point_pos.0.clone();
+    let last_point = next_point_pos.0;
 
     let mut facing_dir = ((last_point.y - control_points.0.y) / (last_point.x - control_points.0.x)).atan();
 
@@ -99,7 +100,7 @@ fn reset_current_curve(
     let angle = rng.gen_range((facing_dir - ANGLE_SPREAD)..(facing_dir + ANGLE_SPREAD));
     let dist = rng.gen_range(0.0..NEW_POINT_GEN_RADIUS.powf(DISTRIBUTION)).powf(1.0 / DISTRIBUTION);
     
-    next_point_pos.0 = next_point_pos.0 + Vector3::new(dist * angle.cos(), dist * angle.sin(), 0.0);
+    next_point_pos.0 += Vector3::new(dist * angle.cos(), dist * angle.sin(), 0.0);
 
     let next_handle = 
         2.0 * next_point_pos.0 - Vector3::new(cursor_pos.0.x as f64, cursor_pos.0.y as f64, 0.0);

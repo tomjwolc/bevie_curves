@@ -30,6 +30,7 @@ impl Plugin for StateControlPlugin {
 #[derive(Component)]
 struct EndScreenStuff;
 
+#[allow(clippy::too_many_arguments)]
 fn reset_pregame(
     mut commands: Commands,
     mut all_objects_transform_query: Query<&mut Transform, Without<CurvePath>>,
