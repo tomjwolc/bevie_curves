@@ -3,8 +3,8 @@ use super::*;
 const HANDLE_LINE_WIDTH: f32 = 1.5;
 const HANDLE_OUTER_CIRCLE_RADIUS: f32 = 10.0;
 const HANDLE_INNER_CIRCLE_RADIUS: f32 = 7.0;
-const HANDLE_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
 
+const CURSOR_HANDLE_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
 const GHOST_HANDLE_COLOR: Color = Color::rgb(0.7, 0.7, 0.7);
 
 pub struct HandlePlugin;
@@ -26,77 +26,83 @@ impl Plugin for HandlePlugin {
     }
 }
 
-#[derive(Component)]
-pub struct CurveHandle;
+#[derive(Component, Clone, Copy)]
+pub struct CursorHandle;
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct GhostHandle;
+
+pub fn make_handle(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    color: Color,
+    base: Vec2,
+    head: Vec2,
+    z: f32,
+    component: impl Component + Copy
+) {
+    // line
+    commands.spawn((GeometryBuilder::build_as(
+        &get_line_path(base, head), 
+        DrawMode::Stroke(StrokeMode::new(color, HANDLE_LINE_WIDTH)), 
+        Transform::from_xyz(0.0, 0.0, z)
+    ), component));
+
+    // outer circle
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes.add(shape::Circle::default().into()).into(),
+        material: materials.add(ColorMaterial::from(color)),
+        transform: Transform
+            ::from_xyz(head.x, head.y, z)
+            .with_scale(Vec3::new(HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS)),
+        ..default()
+    }, component));
+
+    // inner circle
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes.add(shape::Circle::default().into()).into(),
+        material: materials.add(ColorMaterial::from(BACKGROUND_COLOR)),
+        transform: Transform
+            ::from_xyz(head.x, head.y, z + 0.01)
+            .with_scale(Vec3::new(HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS)),
+        ..default()
+    }, component));
+}
 
 fn setup_handles(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
-    // line
-    commands.spawn((GeometryBuilder::build_as(
-        &get_line_path(Vec2::ZERO, Vec2::ZERO), 
-        DrawMode::Stroke(StrokeMode::new(HANDLE_COLOR, HANDLE_LINE_WIDTH)), 
-        Transform::default()
-    ), CurveHandle));
-
-    // outer circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(HANDLE_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 2.0)
-            .with_scale(Vec3::new(HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS)),
-        ..default()
-    }, CurveHandle));
-
-    // inner circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(BACKGROUND_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 2.1)
-            .with_scale(Vec3::new(HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS)),
-        ..default()
-    }, CurveHandle));
+    // cursor handle
+    make_handle(
+        &mut commands,
+        &mut meshes, 
+        &mut materials, 
+        CURSOR_HANDLE_COLOR, 
+        Vec2::ZERO, 
+        Vec2::ZERO, 
+        2.0, 
+        CursorHandle
+    );
 
     // Ghost handles
-
-    // line
-    commands.spawn((GeometryBuilder::build_as(
-        &get_line_path(Vec2::ZERO, Vec2::ZERO), 
-        DrawMode::Stroke(StrokeMode::new(GHOST_HANDLE_COLOR, HANDLE_LINE_WIDTH)), 
-        Transform::default()
-    ), GhostHandle));
-
-    // outer circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(GHOST_HANDLE_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 1.0)
-            .with_scale(Vec3::new(HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS, HANDLE_OUTER_CIRCLE_RADIUS)),
-        ..default()
-    }, GhostHandle));
-
-    // inner circle
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::default().into()).into(),
-        material: materials.add(ColorMaterial::from(BACKGROUND_COLOR)),
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 1.1)
-            .with_scale(Vec3::new(HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS, HANDLE_INNER_CIRCLE_RADIUS)),
-        ..default()
-    }, GhostHandle));
+    make_handle(
+        &mut commands,
+        &mut meshes, 
+        &mut materials, 
+        GHOST_HANDLE_COLOR, 
+        Vec2::ZERO, 
+        Vec2::ZERO, 
+        2.0, 
+        GhostHandle
+    );
 }   
 
 fn place_handle_at_cursor(
-    mut handle_path_query: Query<&mut Path, (With<CurveHandle>, Without<GhostHandle>)>,
-    mut handle_transform_query: Query<&mut Transform, (With<CurveHandle>, Without<GhostHandle>, Without<Path>)>,
+    mut handle_path_query: Query<&mut Path, (With<CursorHandle>, Without<GhostHandle>)>,
+    mut handle_transform_query: Query<&mut Transform, (With<CursorHandle>, Without<GhostHandle>, Without<Path>)>,
     mut ghost_handle_path_query: Query<&mut Path, With<GhostHandle>>,
     mut ghost_handle_transform_query: Query<&mut Transform, (With<GhostHandle>, Without<Path>)>,
     next_point_query: Res<NextPointPos>,

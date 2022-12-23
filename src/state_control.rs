@@ -15,7 +15,7 @@ impl Plugin for StateControlPlugin {
                 .with_system(check_for_click)
             ).add_system_set(
                 SystemSet::on_update(AppState::InGame)
-                .with_system(check_out_of_bounds)
+                // .with_system(check_out_of_bounds)
             ).add_system_set(
                 SystemSet::on_enter(AppState::PostGame)
                 .with_system(post_game_screen)
@@ -35,6 +35,7 @@ fn reset_pregame(
     mut all_objects_transform_query: Query<&mut Transform, Without<CurvePath>>,
     curve_path_entity_query: Query<Entity, With<CurvePath>>,
     end_screen_entities_query: Query<Entity, With<EndScreenStuff>>,
+    last_point_entity_query: Query<Entity, With<LastPoint>>,
     mut all_paths_query: Query<&mut Path, (Without<Transform>, Without<CurvePath>)>,
     mut next_point_pos: ResMut<NextPointPos>,
     mut current_curve: ResMut<CurrentCurve>,
@@ -45,6 +46,10 @@ fn reset_pregame(
 ) {
     if let Ok(curve_path_entity) = curve_path_entity_query.get_single() {
         commands.entity(curve_path_entity).despawn();
+    }
+
+    if let Ok(last_point_entity) = last_point_entity_query.get_single() {
+        commands.entity(last_point_entity).despawn();
     }
 
     for end_screen_entity in end_screen_entities_query.iter() {

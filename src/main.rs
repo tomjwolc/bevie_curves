@@ -17,10 +17,13 @@ use state_control::*;
 mod camera_rubber_banding;
 use camera_rubber_banding::*;
 
+mod lifetime_plugin;
+use lifetime_plugin::*;
+
 const BACKGROUND_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 
-const POINT_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
-const POINT_RADIUS: f32 = 7.0;
+pub const POINT_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
+pub const POINT_RADIUS: f32 = 7.0;
 
 const PLAYER_COLOR: Color = Color::RED;
 const PLAYER_RADIUS: f32 = 10.0;
@@ -76,6 +79,7 @@ fn main() {
         .add_plugin(CurveMovementPlugin)
         .add_plugin(StateControlPlugin)
         .add_plugin(CameraRubberBandingPlugin)
+        .add_plugin(LifetimePlugin)
         
         .add_startup_system(setup)
         .add_system(bevy::window::close_on_esc)
@@ -101,16 +105,16 @@ fn setup(
 
     commands.spawn(Camera2dBundle::default());
 
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgba(1.0, 1.0, 1.0, 0.1),
-            custom_size: Some(Vec2::new(window.width(), window.height())),
-            ..default()
-        },
-        transform: Transform
-            ::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
+    // commands.spawn(SpriteBundle {
+    //     sprite: Sprite {
+    //         color: Color::rgba(1.0, 1.0, 1.0, 0.1),
+    //         custom_size: Some(Vec2::new(window.width(), window.height())),
+    //         ..default()
+    //     },
+    //     transform: Transform
+    //         ::from_xyz(0.0, 0.0, 0.0),
+    //     ..default()
+    // });
 
     commands.spawn((MaterialMesh2dBundle {
         mesh: meshes.add(shape::Circle::default().into()).into(),
