@@ -133,9 +133,9 @@ fn reset_current_curve(
     last_point_pos.x = last_point.x as f32;
     last_point_pos.y = last_point.y as f32;
 
-    let mut facing_dir = ((last_point.y - control_points.0.y) / (last_point.x - control_points.0.x)).atan();
+    let mut facing_dir = ((last_point.y - control_points.1.y) / (last_point.x - control_points.1.x)).atan();
 
-    facing_dir += if last_point.x < control_points.0.x { PI } else { 0.0 };
+    facing_dir += if last_point.x > control_points.1.x { PI } else { 0.0 };
 
     let mut rng = thread_rng();
     let angle = rng.gen_range((facing_dir - ANGLE_SPREAD)..(facing_dir + ANGLE_SPREAD));

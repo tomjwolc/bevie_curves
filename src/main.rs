@@ -20,6 +20,9 @@ use camera_rubber_banding::*;
 mod lifetime_plugin;
 use lifetime_plugin::*;
 
+mod rocks_plugin;
+use rocks_plugin::*;
+
 const BACKGROUND_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 
 pub const POINT_COLOR: Color = Color::rgb(0.5, 0.3, 0.3);
@@ -80,6 +83,7 @@ fn main() {
         .add_plugin(StateControlPlugin)
         .add_plugin(CameraRubberBandingPlugin)
         .add_plugin(LifetimePlugin)
+        .add_plugin(RocksPlugin)
         
         .add_startup_system(setup)
         .add_system(bevy::window::close_on_esc)

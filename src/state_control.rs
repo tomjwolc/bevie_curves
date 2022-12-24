@@ -16,6 +16,7 @@ impl Plugin for StateControlPlugin {
             ).add_system_set(
                 SystemSet::on_update(AppState::InGame)
                 // .with_system(check_out_of_bounds)
+                .with_system(check_rock_intersection)
             ).add_system_set(
                 SystemSet::on_enter(AppState::PostGame)
                 .with_system(post_game_screen)
@@ -82,6 +83,7 @@ fn check_for_click(
     }
 }
 
+#[allow(dead_code)]
 fn check_out_of_bounds(
     windows: Res<Windows>,
     player_transform_query: Query<&Transform, With<Player>>,
@@ -97,6 +99,29 @@ fn check_out_of_bounds(
         player_pos.y < window.height() / -2.0
     {
         app_state.set(AppState::PostGame).unwrap();
+    }
+}
+
+fn check_rock_intersection(
+    rock_paths_query: Query<(&PolygonPoints, &PolygonBoundingBox)>,
+    player_transform_query: Query<&Transform, With<Player>>,
+    mut app_state: ResMut<State<AppState>>
+) {
+    let player_pos = player_transform_query.single().translation;
+
+    for (rock_points, bbox) in rock_paths_query.iter() {
+        if 
+            bbox.0 < player_pos.x &&
+            player_pos.y < bbox.1 &&
+            player_pos.x < bbox.2 && 
+            bbox.3 < player_pos.y &&
+            is_intersecting(
+                &rock_points.0, 
+                &Vec2::new(player_pos.x, player_pos.y)
+            )
+        {
+            app_state.set(AppState::PostGame).unwrap();
+        }
     }
 }
 

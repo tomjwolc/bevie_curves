@@ -95,7 +95,7 @@ fn setup_handles(
         GHOST_HANDLE_COLOR, 
         Vec2::ZERO, 
         Vec2::ZERO, 
-        2.0, 
+        1.9, 
         GhostHandle
     );
 }   
@@ -108,7 +108,7 @@ fn place_handle_at_cursor(
     next_point_query: Res<NextPointPos>,
     mut control_points_query: ResMut<ControlPoints>,
     cursor_pos: Res<CursorPos>,
-    
+    keys: Res<Input<KeyCode>>
 ) {
     let next_point = Vec2::new(next_point_query.0.x as f32, next_point_query.0.y as f32);
     let cursor_x = cursor_pos.0.x;
@@ -130,20 +130,32 @@ fn place_handle_at_cursor(
         handle_transform.translation.y = cursor_y;
     }
 
+    let ghost_x = if keys.pressed(KeyCode::Q) {
+        cursor_x
+    } else {
+        2.0 * next_point.x - cursor_x
+    };
+
+    let ghost_y = if keys.pressed(KeyCode::W) {
+        cursor_y
+    } else {
+        2.0 * next_point.y - cursor_y
+    };
+
     control_points_query.1 = Vector3::new(
-        (2.0 * next_point.x - cursor_x) as f64,
-        (2.0 * next_point.y - cursor_y) as f64,
+        ghost_x as f64,
+        ghost_y as f64,
         0.0
     );
 
     *ghost_handle_path_query.single_mut() = get_line_path(
         next_point, 
-        Vec2::new(2.0 * next_point.x - cursor_x, 2.0 * next_point.y - cursor_y)
+        Vec2::new(ghost_x, ghost_y)
     );
 
     for mut ghost_handle_transform in ghost_handle_transform_query.iter_mut() {
-        ghost_handle_transform.translation.x = 2.0 * next_point.x - cursor_x;
-        ghost_handle_transform.translation.y = 2.0 * next_point.y - cursor_y;
+        ghost_handle_transform.translation.x = ghost_x;
+        ghost_handle_transform.translation.y = ghost_y;
     }
 }
 
