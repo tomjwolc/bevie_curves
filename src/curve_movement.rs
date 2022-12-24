@@ -1,6 +1,6 @@
 use super::*;
 use rand::prelude::*;
-use std::f64::consts::PI;
+use std::{f64::consts::PI, time::Duration};
 
 const NEW_POINT_GEN_RADIUS: f64 = 300.0;
 const ANGLE_SPREAD: f64 = PI / 5.0;
@@ -8,6 +8,9 @@ const DISTRIBUTION: f64 = 5.0;
 
 const PATH_COLOR: Color = Color::RED;
 const PATH_WIDTH: f32 = 1.5;
+
+const GHOST_PATH_LIFESPAN: Duration = Duration::from_secs(2);
+const GHOST_PATH_COLOR: Color = Color::rgb(0.8, 0.6, 0.6);
 
 const T_INCREMENT: fn(f32) -> f32 = |time| 0.1 + 0.01 * time;
 
@@ -28,24 +31,41 @@ impl Plugin for CurveMovementPlugin {
     }
 }
 
+
+
 #[derive(Component)]
 pub struct CurvePath;
 
+#[derive(Component)]
+pub struct LastPoint;
+
 fn setup_curve(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_curve: ResMut<CurrentCurve>,
     control_points: Res<ControlPoints>,
     next_point_pos: ResMut<NextPointPos>,
     cursor_pos: Res<CursorPos>,
     next_point_transform_query: Query<&mut Transform, With<NextPoint>>
 ) {
-    reset_current_curve(&mut current_curve, control_points, next_point_pos, cursor_pos, next_point_transform_query);
+    let mut last_point_transform = Transform::from_xyz(0.0, 0.0, 2.9);
+
+    reset_current_curve(&mut current_curve, &mut last_point_transform.translation, control_points, next_point_pos, cursor_pos, next_point_transform_query);
 
     commands.spawn((GeometryBuilder::build_as(
         &current_curve.0.as_ref().unwrap().to_bezier_path(), 
         DrawMode::Stroke(StrokeMode::new(PATH_COLOR, PATH_WIDTH)), 
         Transform::from_xyz(0.0, 0.0, 2.8)
     ), CurvePath));
+
+    commands.spawn((MaterialMesh2dBundle {
+        mesh: meshes.add(shape::Circle::default().into()).into(),
+        material: materials.add(ColorMaterial::from(POINT_COLOR)),
+        transform: last_point_transform
+            .with_scale(Vec3::new(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS)),
+        ..default()
+    }, LastPoint));
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -54,17 +74,35 @@ fn increment_t(
     mut t: ResMut<T>,
     start_game_time: Res<StartGameTime>,
     mut current_curve: ResMut<CurrentCurve>,
+    mut last_point_query: Query<&mut Transform, (With<LastPoint>, Without<NextPoint>)>,
     control_points: Res<ControlPoints>,
     next_point_pos: ResMut<NextPointPos>,
     cursor_pos: Res<CursorPos>,
-    next_point_transform_query: Query<&mut Transform, With<NextPoint>>
+    next_point_transform_query: Query<&mut Transform, With<NextPoint>>,
+    mut commands: Commands
 ) {
     t.0 += T_INCREMENT(time.elapsed_seconds() - start_game_time.0) / 60.0;
-
+    
     if t.0 >= 1.0 {
         t.0 = 0.0;
 
-        reset_current_curve(&mut current_curve, control_points, next_point_pos, cursor_pos, next_point_transform_query);
+        commands.spawn((GeometryBuilder::build_as(
+            &current_curve.0.as_ref().unwrap().to_bezier_path(), 
+            DrawMode::Stroke(StrokeMode::new(GHOST_PATH_COLOR, PATH_WIDTH)), 
+            Transform::from_xyz(0.0, 0.0, 2.8)
+        ), Lifetime {
+            creation: time.elapsed(),
+            lifespan: GHOST_PATH_LIFESPAN
+        }));
+
+        reset_current_curve(
+            &mut current_curve, 
+            &mut last_point_query.single_mut().translation, 
+            control_points, 
+            next_point_pos, 
+            cursor_pos, 
+            next_point_transform_query
+        );
     }
 }
 
@@ -85,6 +123,7 @@ fn update_movement(
 
 fn reset_current_curve(
     current_curve: &mut ResMut<CurrentCurve>,
+    last_point_pos: &mut Vec3,
     control_points: Res<ControlPoints>,
     mut next_point_pos: ResMut<NextPointPos>,
     cursor_pos: Res<CursorPos>,
@@ -92,9 +131,12 @@ fn reset_current_curve(
 ) {
     let last_point = next_point_pos.0;
 
-    let mut facing_dir = ((last_point.y - control_points.0.y) / (last_point.x - control_points.0.x)).atan();
+    last_point_pos.x = last_point.x as f32;
+    last_point_pos.y = last_point.y as f32;
 
-    facing_dir += if last_point.x < control_points.0.x { PI } else { 0.0 };
+    let mut facing_dir = ((last_point.y - control_points.1.y) / (last_point.x - control_points.1.x)).atan();
+
+    facing_dir += if last_point.x > control_points.1.x { PI } else { 0.0 };
 
     let mut rng = thread_rng();
     let angle = rng.gen_range((facing_dir - ANGLE_SPREAD)..(facing_dir + ANGLE_SPREAD));

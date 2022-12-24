@@ -2,6 +2,7 @@
 name = "bevy-ier_curves"
 version = "0.1.0"
 edition = "2021"
+default-run = "bevy-ier_curves"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,3 +11,5 @@ bevy = { version = "0.9.0", features = ["dynamic"] }
 bevy_prototype_lyon = "0.7.2"
 nalgebra = "0.31.4"
 rand = "0.8.5"
+serde_json = "1.0.91"
+serde = "1.0.151"
