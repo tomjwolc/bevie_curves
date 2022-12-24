@@ -100,6 +100,7 @@ fn setup_handles(
     );
 }   
 
+#[allow(clippy::complexity)]
 fn place_handle_at_cursor(
     mut handle_path_query: Query<&mut Path, (With<CursorHandle>, Without<GhostHandle>)>,
     mut handle_transform_query: Query<&mut Transform, (With<CursorHandle>, Without<GhostHandle>, Without<Path>)>,
@@ -120,15 +121,10 @@ fn place_handle_at_cursor(
         0.0
     );
 
-    *handle_path_query.single_mut() = get_line_path(
-        next_point, 
-        Vec2::new(cursor_x, cursor_y)
-    );
-
-    for mut handle_transform in handle_transform_query.iter_mut() {
-        handle_transform.translation.x = cursor_x;
-        handle_transform.translation.y = cursor_y;
-    }
+    // handle_query.single_mut().new_points(
+    //     next_point, 
+    //     Vec2::new(cursor_x, cursor_y)
+    // );
 
     let ghost_x = if keys.pressed(KeyCode::Q) {
         cursor_x
@@ -147,7 +143,7 @@ fn place_handle_at_cursor(
         ghost_y as f64,
         0.0
     );
-
+    
     *ghost_handle_path_query.single_mut() = get_line_path(
         next_point, 
         Vec2::new(ghost_x, ghost_y)

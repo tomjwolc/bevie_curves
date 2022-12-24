@@ -2,7 +2,7 @@ pub use bevy::{prelude::*, sprite::MaterialMesh2dBundle, ecs::system::EntityComm
 pub use bevy_prototype_lyon::prelude::*;
 pub use nalgebra::Vector3;
 
-pub mod spline;
+mod spline;
 pub use spline::*;
 
 mod handle_plugin;
@@ -52,6 +52,7 @@ struct CurrentCurve(Option<Curve>);
 #[derive(Resource)]
 struct CursorPos(Vec2);
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 enum AppState {
     PreGame,
