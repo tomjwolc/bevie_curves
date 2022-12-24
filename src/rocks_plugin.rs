@@ -121,6 +121,7 @@ fn test_rocks(
     }
 }
 
+#[allow(dead_code)]
 pub fn is_intersecting(polygon_points: &Vec<Vec2>, player_pos: &Vec2) -> bool {
     if player_pos.x == 0.0 && player_pos.y == 0.0 { return false };
 

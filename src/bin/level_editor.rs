@@ -10,6 +10,30 @@ use serde::{Serialize, Deserialize};
 mod rocks_plugin;
 use rocks_plugin::*;
 
+#[allow(dead_code)]
+enum Action {
+    AddBorderPoint,
+    AddAnchor,
+    MoveEndFrom(Vec2),
+    MovePlayAreaBy(Vec2),
+    MoveBorderPointFrom(usize, Vec2),
+    MoveAnchorFrom(usize, Vec2),
+    DeletedBorderPoint(usize, Vec2),
+    DeletedAnchorPoint(usize, Vec2)
+}
+
+#[allow(dead_code)]
+#[derive(Resource)]
+enum Mode {
+    Move,
+    AddBorderPoint,
+    AddAnchor,
+    Deletion
+}
+
+#[derive(Resource)]
+struct Actions(Vec<Action>);
+
 #[derive(Resource)]
 struct CursorPos(Vec2);
 
@@ -74,6 +98,8 @@ fn main() {
         .insert_resource(FileRef(file))
         .insert_resource(WinitSettings::desktop_app())
         .insert_resource(CursorPos(Vec2::ZERO))
+        .insert_resource(Actions(Vec::new()))
+        .insert_resource(Mode::AddBorderPoint)
 
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             window: WindowDescriptor {
@@ -88,7 +114,8 @@ fn main() {
         .add_system(add_point_on_click)
         .add_system(set_cursor_pos)
         .add_system(save_to_file)
-        .add_system(add_point_undo)
+        .add_system(undo)
+        .add_system(bevy::window::close_on_esc)
         .run()
     ;
 }
@@ -97,6 +124,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
     file_info: Res<FileInfo>
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -110,6 +138,37 @@ fn setup(
         ..default()
     });
 
+    let text_style = TextStyle {
+        font: asset_server.load("fonts/HankenGrotesk-VariableFont_wght.ttf"), 
+        font_size: 30.0, 
+        color: Color::BLACK
+    };
+    
+    commands.spawn(TextBundle::from_sections([
+        TextSection {
+            value: "Keyboard shortcuts:\n    \
+                m: Move points\n    \
+                b: Add border points\n    \
+                a: Add anchor points\n\n\
+                Current mode: ".to_string(),
+            style: text_style.clone()
+        }, TextSection {
+            value: "Add border points".to_string(),
+            style: text_style
+        }]
+    )
+        .with_text_alignment(TextAlignment::BOTTOM_LEFT)
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                bottom: Val::Px(10.0),
+                left: Val::Px(10.0),
+                ..default()
+            },
+            ..default()
+        })
+    );
+
     if file_info.border_points.len() > 1 {
         commands.spawn(RockBundle::new(
             file_info.border_points.iter().map(|[x, y]| Vec2::new(*x, *y)).collect()
@@ -122,40 +181,52 @@ fn add_point_on_click(
     buttons: Res<Input<MouseButton>>,
     mut file_info: ResMut<FileInfo>,
     cursor_pos: Res<CursorPos>,
-    rock_entity_query: Query<Entity, With<PolygonPoints>>
+    rock_entity_query: Query<Entity, With<PolygonPoints>>,
+    mode: Res<Mode>
 ) {
     if buttons.just_pressed(MouseButton::Left) {
-        file_info.border_points.push([cursor_pos.0.x, cursor_pos.0.y]);
+        match *mode {
+            Mode::AddBorderPoint => {
+                file_info.border_points.push([cursor_pos.0.x, cursor_pos.0.y]);
 
-        if file_info.border_points.len() > 1 {
-            if let Ok(rock_entity) = rock_entity_query.get_single() {
-                commands.entity(rock_entity).despawn();
-            }
+                if file_info.border_points.len() > 1 {
+                    if let Ok(rock_entity) = rock_entity_query.get_single() {
+                        commands.entity(rock_entity).despawn();
+                    }
 
-            commands.spawn(RockBundle::new(
-                file_info.border_points.iter().map(|[x, y]| Vec2::new(*x, *y)).collect()
-            ));
+                    commands.spawn(RockBundle::new(
+                        file_info.border_points.iter().map(|[x, y]| Vec2::new(*x, *y)).collect()
+                    ));
+                }
+            },
+            _ => {}
         }
     }
 }
 
-fn add_point_undo(
+fn undo(
     mut commands: Commands,
     keys: Res<Input<KeyCode>>,
     mut file_info: ResMut<FileInfo>,
-    rock_entity_query: Query<Entity, With<PolygonPoints>>
+    rock_entity_query: Query<Entity, With<PolygonPoints>>,
+    mut actions: ResMut<Actions>
 ) {
     if keys.pressed(KeyCode::Z) && keys.pressed(KeyCode::LWin) {
-        file_info.border_points.pop();
+        match actions.0.pop().unwrap() {
+            Action::AddBorderPoint => {
+                file_info.border_points.pop();
 
-        if let Ok(rock_entity) = rock_entity_query.get_single() {
-            commands.entity(rock_entity).despawn();
-        }
+                if let Ok(rock_entity) = rock_entity_query.get_single() {
+                    commands.entity(rock_entity).despawn();
+                }
 
-        if file_info.border_points.len() > 1 {
-            commands.spawn(RockBundle::new(
-                file_info.border_points.iter().map(|[x, y]| Vec2::new(*x, *y)).collect()
-            ));
+                if file_info.border_points.len() > 1 {
+                    commands.spawn(RockBundle::new(
+                        file_info.border_points.iter().map(|[x, y]| Vec2::new(*x, *y)).collect()
+                    ));
+                }
+            },
+            _ => {}
         }
     }
 }
