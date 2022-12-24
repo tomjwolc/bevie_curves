@@ -59,14 +59,14 @@ impl RockBundle {
         let shape = path_builder.build();
 
         Self {
-            shape: (GeometryBuilder::build_as(
+            shape: GeometryBuilder::build_as(
                 &shape, 
                 DrawMode::Outlined { 
                     fill_mode: FillMode::color(ROCK_FILL_COLOR), 
                     outline_mode: StrokeMode::new(ROCK_OUTLINE_COLOR, ROCK_OUTLINE_WIDTH) 
                 }, 
                 Transform::from_xyz(0.0, 0.0, 8.0)
-            )),
+            ),
             polygon: PolygonPoints(points),
             bounding_box: bbox
         }
